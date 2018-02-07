@@ -46,28 +46,44 @@ import com.github.messenger4j.send.SenderAction;
 import com.github.messenger4j.send.buttons.Button;
 import com.github.messenger4j.send.templates.GenericTemplate;
 
+/**
+ * 
+ * @author HMA
+ *
+ */
 @RestController
 @RequestMapping("/callback")
 public class CallBackHandler {
 
-
-	 private static final Logger logger = LoggerFactory.getLogger(CallBackHandler.class);
+	private static final Logger logger = LoggerFactory.getLogger(CallBackHandler.class);
 
 	private static final String RESOURCE_URL = "https://raw.githubusercontent.com/fbsamples/messenger-platform-samples/master/node/public";
 	public static final String GOOD_ACTION = "DEVELOPER_DEFINED_PAYLOAD_FOR_GOOD_ACTION";
 	public static final String NOT_GOOD_ACTION = "DEVELOPER_DEFINED_PAYLOAD_FOR_NOT_GOOD_ACTION";
+	public static final String FIRST_JOB = "job_1";
+	public static final String SECOND_JOB = "job_2";
+	public static final String THIRD_JOB = "job_3";
 
 	private final MessengerReceiveClient receiveClient;
 	private final MessengerSendClient sendClient;
 
+	/**
+	 * @param appSecret
+	 * @param verifyToken
+	 * @param sendClient
+	 * 
+	 *            Ce constructeur sera lancer automatiquemet dés l'execution et qui
+	 *            prend en charge tout type d'evenement
+	 */
 	@Autowired
 	public CallBackHandler(@Value("${messenger4j.appSecret}") final String appSecret,
 			@Value("${messenger4j.verifyToken}") final String verifyToken, final MessengerSendClient sendClient) {
 
-		System.out.println("Initializing MessengerReceiveClient - appSecret: "+ appSecret +" verifyToken: "+ verifyToken);
+		System.out.println(
+				"Initializing MessengerReceiveClient - appSecret: " + appSecret + " verifyToken: " + verifyToken);
 		this.receiveClient = MessengerPlatform.newReceiveClientBuilder(appSecret, verifyToken)
 				.onTextMessageEvent(newTextMessageEventHandler())
-				.onQuickReplyMessageEvent(newQuickReplyMessageEventHandler()).onPostbackEvent(newPostbackEventHandler())
+				.onQuickReplyMessageEvent(buttonTest()).onPostbackEvent(newPostbackEventHandler())
 				.onAccountLinkingEvent(newAccountLinkingEventHandler()).onOptInEvent(newOptInEventHandler())
 				.onEchoMessageEvent(newEchoMessageEventHandler())
 				.onMessageDeliveredEvent(newMessageDeliveredEventHandler())
@@ -76,80 +92,178 @@ public class CallBackHandler {
 		this.sendClient = sendClient;
 	}
 
+	/**
+	 * Methode Get pour verifier les tockens et gagné le challenge
+	 * 
+	 * @param mode
+	 * @param verifyToken
+	 * @param challenge
+	 * @return
+	 */
 	@RequestMapping(method = RequestMethod.GET)
 	public ResponseEntity<String> verifyWebhook(@RequestParam("hub.mode") final String mode,
 			@RequestParam("hub.verify_token") final String verifyToken,
 			@RequestParam("hub.challenge") final String challenge) {
 
-		System.out.println("Received Webhook verification request - mode: "+ mode +" verifyToken: "+ verifyToken +" challenge: "+ challenge);
+		System.out.println("Received Webhook verification request - mode: " + mode + " verifyToken: " + verifyToken
+				+ " challenge: " + challenge);
 		try {
 			return ResponseEntity.ok(this.receiveClient.verifyWebhook(mode, verifyToken, challenge));
 		} catch (MessengerVerificationException e) {
-			System.out.println("Webhook verification failed: "+ e.getMessage());
+			System.out.println("Webhook verification failed: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
 		}
 	}
 
+	/**
+	 * methode post pour la reception des evenements
+	 * 
+	 * @param payload
+	 * @param signature
+	 * @return
+	 */
 	@RequestMapping(method = RequestMethod.POST)
 	public ResponseEntity<Void> handleCallback(@RequestBody final String payload,
 			@RequestHeader("X-Hub-Signature") final String signature) {
 
-		System.out.println("Received Messenger Platform callback - payload: "+payload+" signature: " +signature);
+		System.out.println("Received Messenger Platform callback - payload: " + payload + " signature: " + signature);
 		try {
 			this.receiveClient.processCallbackPayload(payload, signature);
 			System.out.println("Processed callback payload successfully ");
 			return ResponseEntity.status(HttpStatus.OK).build();
 		} catch (MessengerVerificationException e) {
-			System.out.println("Processing of callback payload failed: "+ e.getMessage());
+			System.out.println("Processing of callback payload failed: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 		}
 	}
 
+	// ****************************************************************************************************************************************\\
+	// ****************************************************************************************************************************************\\
+	// ****************************************************************************************************************************************\\
+	// ****************************************************************************************************************************************\\
+
+	private void carrousselTest(String recipientId) throws MessengerApiException,MessengerIOException {
+		
+		String tit = "titre 1";
+		final List<Button> first = Button.newListBuilder().addUrlButton("show wit.AI", "https://wit.ai/").toList().build();
+		final List<Button> second = Button.newListBuilder().addUrlButton("Show DialogFlow", "https://dialogflow.com/").toList().build();
+		final GenericTemplate myTemplate = GenericTemplate.newBuilder().addElements()
+				.addElement("c'est quoi wit ai?").subtitle("Witai")
+				.imageUrl("http://ectolus.com/wp-content/uploads/2017/06/WITAI.png")
+				.buttons(first).toList()
+		
+				.addElement("c'est quoi dialogFlow?").subtitle("dialogFlow ai")
+				.imageUrl("https://home-assistant.io/images/supported_brands/dialogflow.png").buttons(second).toList()
+				.done().build();
+		
+		this.sendClient.sendTemplate(recipientId, myTemplate);
+	}
+
+	private QuickReplyMessageEventHandler buttonTest() {
+		return event -> {
+			logger.debug("Received QuickReplyMessageEvent: {}", event);
+
+			final String senderId = event.getSender().getId();
+			final String messageId = event.getMid();
+			final String quickReplyPayload = event.getQuickReply().getPayload();
+
+			logger.info("Received quick reply for message '{}' with payload '{}'", messageId, quickReplyPayload);
+
+			try {
+				if (quickReplyPayload.equals(FIRST_JOB)) {
+					sendTextMessage(senderId, "First job chosen");
+					logger.info("choix du premier message");
+					logger.info("\n essai du contenu du msg : '{}' ", messageId);
+
+				} else if (quickReplyPayload.equals(SECOND_JOB)) {
+					sendTextMessage(senderId, "Second job chosen");
+					logger.info("choix du 2eme message messageId : '{}' \n Payload '{}' \n ", messageId,
+							quickReplyPayload);
+
+					logger.info("\n essai du contenu du msg : '{}' ", messageId.toString());
+				} else
+					sendTextMessage(senderId, "Last job wwww ");
+			} catch (Exception e) {
+				handleSendException(e);
+			}
+
+			sendTextMessage(senderId, "that's all for now");
+		};
+	}
+
+	private void myButtonTest(String recipientId) throws MessengerApiException, MessengerIOException {
+		final List<QuickReply> myOptions = QuickReply.newListBuilder()
+				.addTextQuickReply("First job", FIRST_JOB).toList()
+				.addTextQuickReply("Second job", SECOND_JOB).toList()
+				.addTextQuickReply("Third Job", THIRD_JOB).toList()
+				.build();
+
+		this.sendClient.sendTextMessage(recipientId, "You have to choose a Job", myOptions);
+
+	}
+
+	// ****************************************************************************************************************************************\\
+	// ****************************************************************************************************************************************\\
+	// ****************************************************************************************************************************************\\
+	// ****************************************************************************************************************************************\\
+
+	/**
+	 * Methode responsable pour réagir à un messenge texte envoyer
+	 * 
+	 * @return
+	 */
 	private TextMessageEventHandler newTextMessageEventHandler() {
-        return event -> {
-            System.out.println("Received TextMessageEvent: "+ event);
-            final String messageId = event.getMid();
-            final String messageText = event.getText();
-            final String senderId = event.getSender().getId();
-            final Date timestamp = event.getTimestamp();
-            System.out.println("Received message "+messageId+" with text "+messageText+" from user "+senderId+" at "+timestamp);
-            try {
-                switch (messageText.toLowerCase()) {
+		return event -> {
+			System.out.println("Received TextMessageEvent: " + event);
+			final String messageId = event.getMid();
+			final String messageText = event.getText();
+			final String senderId = event.getSender().getId();
+			final Date timestamp = event.getTimestamp();
+			System.out.println("Received message " + messageId + " with text " + messageText + " from user " + senderId
+					+ " at " + timestamp);
+			try {
+				switch (messageText.toLowerCase()) {
 
+				case "yo":
+					sendTextMessage(senderId, "Hello, What I can do for you ? Type the word you're looking for");
+					break;
 
-                    case "yo":
-                        sendTextMessage(senderId, "Hello, What I can do for you ? Type the word you're looking for");
-                        break;
-
-                    case "great":
-                        sendTextMessage(senderId, "You're welcome :) keep rocking");
-                        break;
-                    case "quick":
-                    	sendQuickReply(senderId);
-                    	break;
-                    case "doc":
-                    	sendSpringDoc(senderId, "spring");
-                        break;
-                    default:
-                    	System.out.println("default response");
-                    	sendTextMessage(senderId , "I can't understand ");
-                        sendReadReceipt(senderId);
-                    	sendTypingOn(senderId);
-                       sendTypingOff(senderId);
-                       break;
-                }
-            } catch (MessengerApiException e) {
+				case "great":
+					sendTextMessage(senderId, "You're welcome :) keep rocking");
+					break;
+				case "quick":
+					sendQuickReply(senderId);
+					break;
+				case "doc":
+					sendSpringDoc(senderId, "spring");
+					break;
+				case "button test":
+					myButtonTest(senderId);
+					break;
+				case "caroussel test":
+					carrousselTest(senderId);
+					break;
+				default:
+					System.out.println("default response");
+					sendTextMessage(senderId, "I can't understand ");
+					sendReadReceipt(senderId);
+					sendTypingOn(senderId);
+					sendTypingOff(senderId);
+					break;
+				}
+			} catch (MessengerApiException e) {
 				System.out.println("Messenger Api Exception 11111111111111  " + e);
-				
+
 			} catch (MessengerIOException e) {
 				System.out.println("Messenger IO Exception 222222222222222 " + e);
 			} catch (IOException e) {
 				System.out.println("IO Exception 33 spring doc " + e);
 			}
-        };
-    }
+		};
+	}
 
-	private void sendSpringDoc(String recipientId, String keyword) throws IOException, MessengerApiException, MessengerIOException{
+	private void sendSpringDoc(String recipientId, String keyword)
+			throws IOException, MessengerApiException, MessengerIOException {
 
 		Document doc = Jsoup.connect(("https://spring.io/search?q=").concat(keyword)).get();
 		String countResult = doc.select("div.search-results--count").first().ownText();
