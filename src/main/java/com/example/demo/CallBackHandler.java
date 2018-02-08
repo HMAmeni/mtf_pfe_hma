@@ -45,6 +45,7 @@ import com.github.messenger4j.send.Recipient;
 import com.github.messenger4j.send.SenderAction;
 import com.github.messenger4j.send.buttons.Button;
 import com.github.messenger4j.send.templates.GenericTemplate;
+import com.github.messenger4j.send.templates.GenericTemplate.Element.ListBuilder;
 
 /**
  * 
@@ -63,6 +64,10 @@ public class CallBackHandler {
 	public static final String FIRST_JOB = "job_1";
 	public static final String SECOND_JOB = "job_2";
 	public static final String THIRD_JOB = "job_3";
+	public static final String MENU_1 = "search job ************ ";
+	public static final String MENU_2 = "Ask for help************ ";
+	public static final String MENU_3 = "change language ************ ";
+	public static final String MENU_4 = "hheellll ************ ";
 
 	private final MessengerReceiveClient receiveClient;
 	private final MessengerSendClient sendClient;
@@ -126,13 +131,13 @@ public class CallBackHandler {
 	public ResponseEntity<Void> handleCallback(@RequestBody final String payload,
 			@RequestHeader("X-Hub-Signature") final String signature) {
 
-		System.out.println("Received Messenger Platform callback - payload: " + payload + " signature: " + signature);
+		System.out.println("\nReceived Messenger Platform callback - payload: " + payload + " signature: " + signature);
 		try {
 			this.receiveClient.processCallbackPayload(payload, signature);
-			System.out.println("Processed callback payload successfully ");
+			System.out.println("\nProcessed callback payload successfully ");
 			return ResponseEntity.status(HttpStatus.OK).build();
 		} catch (MessengerVerificationException e) {
-			System.out.println("Processing of callback payload failed: " + e.getMessage());
+			System.out.println("\nProcessing of callback payload failed: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 		}
 	}
@@ -144,7 +149,6 @@ public class CallBackHandler {
 
 	private void carrousselTest(String recipientId) throws MessengerApiException,MessengerIOException {
 		
-		String tit = "titre 1";
 		final List<Button> first = Button.newListBuilder().addUrlButton("show wit.AI", "https://wit.ai/").toList().build();
 		final List<Button> second = Button.newListBuilder().addUrlButton("Show DialogFlow", "https://dialogflow.com/").toList().build();
 		final GenericTemplate myTemplate = GenericTemplate.newBuilder().addElements()
@@ -161,23 +165,23 @@ public class CallBackHandler {
 
 	private QuickReplyMessageEventHandler buttonTest() {
 		return event -> {
-			logger.debug("Received QuickReplyMessageEvent: {}", event);
+			logger.debug("\nReceived QuickReplyMessageEvent: {}", event);
 
 			final String senderId = event.getSender().getId();
 			final String messageId = event.getMid();
 			final String quickReplyPayload = event.getQuickReply().getPayload();
 
-			logger.info("Received quick reply for message '{}' with payload '{}'", messageId, quickReplyPayload);
+			logger.info("\nReceived quick reply for message '{}' with payload '{}'", messageId, quickReplyPayload);
 
 			try {
 				if (quickReplyPayload.equals(FIRST_JOB)) {
 					sendTextMessage(senderId, "First job chosen");
-					logger.info("choix du premier message");
+					logger.info("\nchoix du premier message");
 					logger.info("\n essai du contenu du msg : '{}' ", messageId);
 
 				} else if (quickReplyPayload.equals(SECOND_JOB)) {
 					sendTextMessage(senderId, "Second job chosen");
-					logger.info("choix du 2eme message messageId : '{}' \n Payload '{}' \n ", messageId,
+					logger.info("\nchoix du 2eme message messageId : '{}' \n Payload '{}' \n ", messageId,
 							quickReplyPayload);
 
 					logger.info("\n essai du contenu du msg : '{}' ", messageId.toString());
@@ -201,6 +205,17 @@ public class CallBackHandler {
 		this.sendClient.sendTextMessage(recipientId, "You have to choose a Job", myOptions);
 
 	}
+	
+	private void myWebViewTest(String recipientId) throws MessengerApiException, MessengerIOException{
+		final List<Button> fillDet = Button.newListBuilder().addUrlButton("fill details", "https://wit.ai/").toList().build();
+		
+		final GenericTemplate webView = GenericTemplate.newBuilder().addElements()
+					.addElement("web view test").subtitle("we need some details!!")
+					.buttons(fillDet).toList().done().build();
+		
+		this.sendClient.sendTemplate(recipientId,webView);
+			// "You have to fill details"
+	}
 
 	// ****************************************************************************************************************************************\\
 	// ****************************************************************************************************************************************\\
@@ -214,12 +229,12 @@ public class CallBackHandler {
 	 */
 	private TextMessageEventHandler newTextMessageEventHandler() {
 		return event -> {
-			System.out.println("Received TextMessageEvent: " + event);
+			System.out.println("\nReceived TextMessageEvent: " + event);
 			final String messageId = event.getMid();
 			final String messageText = event.getText();
 			final String senderId = event.getSender().getId();
 			final Date timestamp = event.getTimestamp();
-			System.out.println("Received message " + messageId + " with text " + messageText + " from user " + senderId
+			System.out.println("\nReceived message " + messageId + " with text " + messageText + " from user " + senderId
 					+ " at " + timestamp);
 			try {
 				switch (messageText.toLowerCase()) {
@@ -234,8 +249,8 @@ public class CallBackHandler {
 				case "quick":
 					sendQuickReply(senderId);
 					break;
-				case "doc":
-					sendSpringDoc(senderId, "spring");
+				case "view":
+					myWebViewTest(senderId);
 					break;
 				case "button test":
 					myButtonTest(senderId);
@@ -243,8 +258,9 @@ public class CallBackHandler {
 				case "caroussel test":
 					carrousselTest(senderId);
 					break;
+				
 				default:
-					System.out.println("default response");
+					System.out.println("\ndefault response");
 					sendTextMessage(senderId, "I can't understand ");
 					sendReadReceipt(senderId);
 					sendTypingOn(senderId);
@@ -252,12 +268,10 @@ public class CallBackHandler {
 					break;
 				}
 			} catch (MessengerApiException e) {
-				System.out.println("Messenger Api Exception 11111111111111  " + e);
+				System.out.println("\nMessenger Api Exception 11111111111111  " + e);
 
 			} catch (MessengerIOException e) {
-				System.out.println("Messenger IO Exception 222222222222222 " + e);
-			} catch (IOException e) {
-				System.out.println("IO Exception 33 spring doc " + e);
+				System.out.println("\nMessenger IO Exception 222222222222222 " + e);
 			}
 		};
 	}
@@ -327,13 +341,13 @@ public class CallBackHandler {
 
 	private QuickReplyMessageEventHandler newQuickReplyMessageEventHandler() {
 		return event -> {
-			System.out.println("Received QuickReplyMessageEvent: " + event);
+			System.out.println("\nReceived QuickReplyMessageEvent: " + event);
 
 			final String senderId = event.getSender().getId();
 			final String messageId = event.getMid();
 			final String quickReplyPayload = event.getQuickReply().getPayload();
 
-			System.out.println("Received quick reply for message " + messageId + " with payload " + quickReplyPayload);
+			System.out.println("\nReceived quick reply for message " + messageId + " with payload " + quickReplyPayload);
 
 			try {
 				if (quickReplyPayload.equals(GOOD_ACTION))
@@ -352,65 +366,84 @@ public class CallBackHandler {
 
 	private PostbackEventHandler newPostbackEventHandler() {
 		return event -> {
-			System.out.println("Received PostbackEvent: " + event);
+			System.out.println("\nReceived PostbackEvent: " + event);
 
 			final String senderId = event.getSender().getId();
 			final String recipientId = event.getRecipient().getId();
 			final String payload = event.getPayload();
 			final Date timestamp = event.getTimestamp();
+			
+			switch (payload ) {
 
-			System.out.println("Received postback for user " + senderId + "  and page " + recipientId
+			case "MENU_1":
+				sendTextMessage(senderId, MENU_1+" c'est le menu 1 choisit");
+				break;
+
+			case "MENU_2":
+				sendTextMessage(senderId, MENU_2 +" c'est le menu 2 choisit");
+				break;
+			case "MENU_3":
+				sendTextMessage(senderId, MENU_3+" c'est le menu 3 choisit");
+				break;
+			case "MENU_4":
+				sendTextMessage(senderId, MENU_4+" c'est le menu 4 choisit");
+				break;
+			default:
+				System.out.println("\ndefault response");
+				break;
+			}	
+			System.out.println("\nReceived postback for user " + senderId + "  and page " + recipientId
 					+ "  with payload  " + payload + " at " + timestamp);
-			sendTextMessage(senderId, "Postback called");
+			sendTextMessage(senderId, "Postback called spécifiq");
 		};
 	}
 
 	private AccountLinkingEventHandler newAccountLinkingEventHandler() {
 		return event -> {
-			System.out.println("Received AccountLinkingEvent: " + event);
+			System.out.println("\nReceived AccountLinkingEvent: " + event);
 
 			final String senderId = event.getSender().getId();
 			final AccountLinkingEvent.AccountLinkingStatus accountLinkingStatus = event.getStatus();
 			final String authorizationCode = event.getAuthorizationCode();
 
-			System.out.println("account linking event for user " + senderId + "  with status " + accountLinkingStatus
+			System.out.println("\naccount linking event for user " + senderId + "  with status " + accountLinkingStatus
 					+ "  and auth code " + authorizationCode);
 		};
 	}
 
 	private OptInEventHandler newOptInEventHandler() {
 		return event -> {
-			System.out.println("Received OptInEvent: " + event);
+			System.out.println("\nReceived OptInEvent: " + event);
 
 			final String senderId = event.getSender().getId();
 			final String recipientId = event.getRecipient().getId();
 			final String passThroughParam = event.getRef();
 			final Date timestamp = event.getTimestamp();
 
-			System.out.println("Received authentication for user " + senderId + "and page " + recipientId
+			System.out.println("\nReceived authentication for user " + senderId + "and page " + recipientId
 					+ "  with pass through param " + passThroughParam + " at " + timestamp);
 
-			sendTextMessage(senderId, "Authentication successful");
+			sendTextMessage(senderId, "\nAuthentication successful");
 		};
 	}
 
 	private EchoMessageEventHandler newEchoMessageEventHandler() {
 		return event -> {
-			System.out.println("Received EchoMessageEvent: " + event);
+			System.out.println("\nReceived EchoMessageEvent: " + event);
 
 			final String messageId = event.getMid();
 			final String recipientId = event.getRecipient().getId();
 			final String senderId = event.getSender().getId();
 			final Date timestamp = event.getTimestamp();
 
-			System.out.println("Received echo for message " + messageId + "that has been sent to recipient "
+			System.out.println("\nReceived echo for message " + messageId + "that has been sent to recipient "
 					+ recipientId + "  by sender " + senderId + " at " + timestamp);
 		};
 	}
 
 	private MessageDeliveredEventHandler newMessageDeliveredEventHandler() {
 		return event -> {
-			System.out.println("Received MessageDeliveredEvent: " + event);
+			System.out.println("\nReceived MessageDeliveredEvent: " + event);
 
 			final List<String> messageIds = event.getMids();
 			final Date watermark = event.getWatermark();
@@ -418,31 +451,31 @@ public class CallBackHandler {
 
 			if (messageIds != null) {
 				messageIds.forEach(messageId -> {
-					System.out.println("Received delivery confirmation for message : " + messageId);
+					System.out.println("\nReceived delivery confirmation for message : " + messageId);
 				});
 			}
 
-			System.out.println("All messages before: " + watermark + " were delivered to user " + senderId);
+			System.out.println("\nAll messages before: " + watermark + " were delivered to user " + senderId);
 		};
 	}
 
 	private MessageReadEventHandler newMessageReadEventHandler() {
 		return event -> {
-			System.out.println("Received MessageReadEvent " + event);
+			System.out.println("\nReceived MessageReadEvent " + event);
 
 			final Date watermark = event.getWatermark();
 			final String senderId = event.getSender().getId();
 
-			System.out.println("All messages before:  " + watermark + " were read by user: " + senderId);
+			System.out.println("\nAll messages before:  " + watermark + " were read by user: " + senderId);
 		};
 	}
 
 	private FallbackEventHandler newFallbackEventHandler() {
 		return event -> {
-			System.out.println("Received FallbackEvent: " + event);
+			System.out.println("\nReceived FallbackEvent: " + event);
 
 			final String senderId = event.getSender().getId();
-			System.out.println("Received unsupported message from user " + senderId);
+			System.out.println("\nReceived unsupported message from user " + senderId);
 		};
 	}
 
@@ -459,11 +492,11 @@ public class CallBackHandler {
 	}
 
 	private void handleSendException(Exception e) {
-		System.out.println("Message could not be sent. An unexpected error occurred. " + e);
+		System.out.println("\nMessage could not be sent. An unexpected error occurred. " + e);
 	}
 
 	private void handleIOException(Exception e) {
-		System.out.println("Could not open Spring.io page. An unexpected error occurred. " + e);
+		System.out.println("\nCould not open Spring.io page. An unexpected error occurred. " + e);
 	}
 
 }
