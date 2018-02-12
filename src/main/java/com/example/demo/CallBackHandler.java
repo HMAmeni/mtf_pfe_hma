@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.domain.MyTemplates;
 import com.example.domain.SearchResult;
 import java.io.IOException;
 import java.util.Date;
@@ -195,7 +196,7 @@ public class CallBackHandler {
 		};
 	}
 
-	private void myButtonTest(String recipientId) throws MessengerApiException, MessengerIOException {
+	/*private void myButtonTest(String recipientId) throws MessengerApiException, MessengerIOException {
 		final List<QuickReply> myOptions = QuickReply.newListBuilder()
 				.addTextQuickReply("First job", FIRST_JOB).toList()
 				.addTextQuickReply("Second job", SECOND_JOB).toList()
@@ -204,7 +205,7 @@ public class CallBackHandler {
 
 		this.sendClient.sendTextMessage(recipientId, "You have to choose a Job", myOptions);
 
-	}
+	}*/
 	
 	private void myWebViewTest(String recipientId) throws MessengerApiException, MessengerIOException{
 		final List<Button> fillDet = Button.newListBuilder().addUrlButton("fill details", "https://wit.ai/").toList().build();
@@ -227,6 +228,7 @@ public class CallBackHandler {
 	 * 
 	 * @return
 	 */
+	MyTemplates myTemplate = new MyTemplates();
 	private TextMessageEventHandler newTextMessageEventHandler() {
 		return event -> {
 			System.out.println("\nReceived TextMessageEvent: " + event);
@@ -253,7 +255,10 @@ public class CallBackHandler {
 					myWebViewTest(senderId);
 					break;
 				case "button test":
-					myButtonTest(senderId);
+				{
+					this.sendClient.sendTextMessage(senderId, "You have to choose a Job55555555 ", myTemplate.myButtonTest() );
+				}
+					
 					break;
 				case "caroussel test":
 					carrousselTest(senderId);
